@@ -55,13 +55,18 @@ detector = PoseDetector()
 shirt_files = [f for f in os.listdir(processed_folder) if f.endswith(('.png', '.jpg'))]
 current_shirt_index = 0
 
+# Efficient image loading with caching
 def load_shirt(index):
-    shirt_path = os.path.join(processed_folder, shirt_files[index])
-    shirt_image = cv2.imread(shirt_path, cv2.IMREAD_UNCHANGED)
-    if shirt_image is None:
-        print(f"Error: Unable to load shirt image {shirt_path}.")
-        exit()
-    return shirt_image
+    global img_Shirt
+    if shirt_files:
+        shirt_path = os.path.join(processed_folder, shirt_files[index])
+        img_Shirt = cv2.imread(shirt_path, cv2.IMREAD_UNCHANGED)
+        
+        # Check if the image loaded successfully
+        if img_Shirt is None:
+            print(f"Error: Unable to load shirt image {shirt_path}.")
+            return None
+    return img_Shirt
 
 # Load initial shirt
 img_Shirt = load_shirt(current_shirt_index)
@@ -95,7 +100,6 @@ def virtual_fitting():
                 break
 
             img = cv2.resize(img, (960, 720))
-            
             img = detector.findPose(img, draw=False)
             lmList, bboxInfo = detector.findPosition(img, draw=False, bboxWithHands=False)
             
@@ -110,18 +114,21 @@ def virtual_fitting():
                                    (left_shoulder[1] + right_shoulder[1]) // 2]
 
                 # Use preprocessed shirt dimensions
-                shirt_width = img_Shirt.shape[1]
-                shirt_height = img_Shirt.shape[0]
+                if img_Shirt is not None:
+                    shirt_width = img_Shirt.shape[1]
+                    shirt_height = img_Shirt.shape[0]
 
-                # Adjust shirt position (vertically upward)
-                center_x = int(shoulder_center[0] + horizontal_offset)
-                center_y = int(shoulder_center[1] - shirt_height * 0.6 + vertical_offset)
+                    # Adjust shirt position (vertically upward)
+                    center_x = int(shoulder_center[0] + horizontal_offset)
+                    center_y = int(shoulder_center[1] - shirt_height * 0.6 + vertical_offset)
 
-                # Overlay shirt
-                try:
-                    img = cvzone.overlayPNG(img, img_Shirt, [center_x - shirt_width // 2, center_y])
-                except Exception as e:
-                    print(f"Error overlaying shirt: {e}")
+                    # Overlay shirt
+                    try:
+                        img = cvzone.overlayPNG(img, img_Shirt, [center_x - shirt_width // 2, center_y])
+                    except Exception as e:
+                        print(f"Error overlaying shirt: {e}")
+                else:
+                    print("Error: No shirt loaded. Skipping overlay.")
             
             _, img_encoded = cv2.imencode('.jpg', img)
             frame = img_encoded.tobytes()
@@ -168,4 +175,4 @@ def adjust_position():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 3000)))
