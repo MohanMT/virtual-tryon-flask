@@ -3,6 +3,7 @@ import cv2
 import cvzone
 from flask import Flask, render_template, request, jsonify, Response
 from cvzone.PoseModule import PoseDetector
+import concurrent.futures
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,24 +24,31 @@ def preprocess_shirts(shoulder_width_cm, torso_height_cm):
     torso_height_px = int(torso_height_cm * calibration_factor * size_reduction_factor)
 
     shirt_files = [f for f in os.listdir(original_folder) if f.endswith(('.png', '.jpg'))]
-    for shirt_file in shirt_files:
-        shirt_path = os.path.join(original_folder, shirt_file)
-        shirt_image = cv2.imread(shirt_path, cv2.IMREAD_UNCHANGED)
-        
-        if shirt_image is None:
-            print(f"Error loading {shirt_path}, skipping...")
-            continue
-        
-        aspect_ratio = shirt_image.shape[0] / shirt_image.shape[1]
-        target_width = shoulder_width_px
-        target_height = int(torso_height_px * aspect_ratio)
 
-        resized_shirt = cv2.resize(shirt_image, (target_width, target_height), interpolation=cv2.INTER_AREA)
-        processed_path = os.path.join(processed_folder, shirt_file)
-        cv2.imwrite(processed_path, resized_shirt)
-        print(f"Processed and saved: {processed_path}")
+    # Parallelize image preprocessing
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(process_shirt, shirt_file, shoulder_width_px, torso_height_px) for shirt_file in shirt_files]
+        for future in concurrent.futures.as_completed(futures):
+            print(future.result())  # Handle any logging or results here
 
     print("Preprocessing complete. All shirts have been resized based on user dimensions.")
+
+def process_shirt(shirt_file, shoulder_width_px, torso_height_px):
+    shirt_path = os.path.join(original_folder, shirt_file)
+    shirt_image = cv2.imread(shirt_path, cv2.IMREAD_UNCHANGED)
+    
+    if shirt_image is None:
+        print(f"Error loading {shirt_path}, skipping...")
+        return f"Error loading {shirt_path}, skipping..."
+    
+    aspect_ratio = shirt_image.shape[0] / shirt_image.shape[1]
+    target_width = shoulder_width_px
+    target_height = int(torso_height_px * aspect_ratio)
+
+    resized_shirt = cv2.resize(shirt_image, (target_width, target_height), interpolation=cv2.INTER_AREA)
+    processed_path = os.path.join(processed_folder, shirt_file)
+    cv2.imwrite(processed_path, resized_shirt)
+    return f"Processed and saved: {processed_path}"
 
 # Initialize camera and pose detector
 detector = PoseDetector()
