@@ -3,6 +3,6 @@ opencv-python==4.10.0.84
 opencv-python-headless==4.10.0.84
 cvzone==1.6.1
 Flask==3.0.3
-mediapipe==0.10.5
+mediapipe>=0.10.13
 gunicorn==20.1.0
 numpy<2

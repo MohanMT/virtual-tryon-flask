@@ -4,9 +4,13 @@ import cvzone
 from flask import Flask, render_template, request, jsonify, Response
 from cvzone.PoseModule import PoseDetector
 import concurrent.futures
+from flask_cors import CORS
+
 
 # Initialize Flask app
+
 app = Flask(__name__)
+CORS(app)  # This allows requests from any origin
 
 # Initialize paths
 original_folder = "shirt"
