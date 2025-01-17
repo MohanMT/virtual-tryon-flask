@@ -96,7 +96,13 @@ def process_shirts():
 def virtual_fitting():
     def generate():
         global vertical_offset, horizontal_offset
-        cap = cv2.VideoCapture(0)
+        # Replace with your RTSP stream URL
+        rtsp_url = 'rtsp://username:password@ip_address:port'  # Change this URL as needed
+        cap = cv2.VideoCapture(rtsp_url)
+
+        if not cap.isOpened():
+            print("Error: Unable to open video stream.")
+            return
 
         while True:
             success, img = cap.read()
